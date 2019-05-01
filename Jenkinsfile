@@ -62,39 +62,40 @@ pipeline {
 
         
 
-        // Submit a 1 node debug job to Cobalt to test the new mpi4py
-        // -----------------------------------------------------------
-        stage('Quick Test') {
-            steps {
-                // we will "pass" BUILD_ROOT to the testMPI4Py.sh Cobalt job thru a file
-                sh "echo ${env.BUILD_ROOT} > BUILD_ROOT.path"
+        // // Submit a 1 node debug job to Cobalt to test the new mpi4py
+        // // -----------------------------------------------------------
+        // stage('Quick Test') {
+        //     steps {
+        //         // we will "pass" BUILD_ROOT to the testMPI4Py.sh Cobalt job thru a file
+        //         sh "echo ${env.BUILD_ROOT} > BUILD_ROOT.path"
 
-                // use the "script" step to embed old-fashioned Jenkins procedural scripting
-                // this way, we can conveniently "capture" the Cobalt job ID from tail of stdout
-                script {
-                    cobalt_id = sh(returnStdout: true, script: 'qsub -A datascience -n 1 -t 10 -q debug-flat-quad  ./test-torch.sh | tail -n 1').trim()
-                }
+        //         // use the "script" step to embed old-fashioned Jenkins procedural scripting
+        //         // this way, we can conveniently "capture" the Cobalt job ID from tail of stdout
+        //         script {
+        //             cobalt_id = sh(returnStdout: true, script: 'qsub -A datascience -n 1 -t 10 -q debug-flat-quad  ./test-torch.sh | tail -n 1').trim()
+        //         }
 
-                // Keep checking until a ${cobalt_id}.finished file appears
-                echo "Submitted Job to cobalt (ID ${cobalt_id}). Polling on completion..."
-                timeout(time: 24, unit: 'HOURS') {
-                    function isQueued { (qstat $1 >& /dev/null); echo $?; };
-                    sh "while [ \$(isQueued $COBALT_JOBID) -eq 0 ]; do  echo \"$COBALT_JOBID is still queued...\";  sleep 20; done "
-                $(qstat 330877 >& /dev/null; echo $?) -eq 0 
-                echo "Job completed; checking output..."
-                sh "cat ${cobalt_id}.output"
+        //         // Keep checking until a ${cobalt_id}.finished file appears
+        //         echo "Submitted Job to cobalt (ID ${cobalt_id}). Polling on completion..."
+        //         timeout(time: 24, unit: 'HOURS') {
+        //             function isQueued { (qstat $1 >& /dev/null); echo $?; };
+        //             sh "while [ \$(isQueued $COBALT_JOBID) -eq 0 ]; do  echo \"$COBALT_JOBID is still queued...\";  sleep 20; done "
+        //         $(qstat 330877 >& /dev/null; echo $?) -eq 0 
+        //         echo "Job completed; checking output..."
+        //         sh "cat ${cobalt_id}.output"
 
-                // grep -q will return 0 (success) only if there is a match:
-                sh "grep -q 'Success: pytorch session succeeded.' ${cobalt_id}.output"
-            }
-        }
+        //         // grep -q will return 0 (success) only if there is a match:
+        //         sh "grep -q 'Success: pytorch session succeeded.' ${cobalt_id}.output"
+        //     }
+        // }
 
-        // On success, deploy env to a permanent location
-        stage('Deploy and Benchmark') {
-            steps {
-                sh ". ./deploy-benchmark.sh"
-            }
-        }
+        // // On success, deploy env to a permanent location
+        // stage('Deploy and Benchmark') {
+        //     steps {
+        //         sh ". ./deploy-benchmark.sh"
+        //     }
+        // }
+
     }
     post {
         success {
@@ -112,13 +113,7 @@ pipeline {
         // Always clean up after yourself
         always {
             sh "rm -rf $BUILD_ROOT"
-            sh 'rm -rf ./pytorch'
-            // sh 'rm -rf ./tensorflow'
-            sh '''
-            rm -f *.output
-            rm -f *.error
-            rm -f *.cobaltlog
-            '''
+            sh "rm -rf ./mkl-dnn"
             deleteDir()
         }
     }
